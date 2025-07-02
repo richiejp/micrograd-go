@@ -18,7 +18,7 @@ const (
 	OpTanh Op = "tanh"
 	OpExp  Op = "exp"
 	OpPow  Op = "pow"
-	OpDiv  Op = "div"
+	OpDiv  Op = "/"
 )
 
 type Value[T constraints.Float] struct {
@@ -77,14 +77,14 @@ func (c *Context[T]) WithParam(param T) ValueArg[T] {
 	}
 }
 
-func (c *Context[T]) NewValue(d T, withArgs ...ValueArg[T]) Value[T] {
+func (c *Context[T]) Val(d T, withArgs ...ValueArg[T]) *Value[T] {
 	var args ValueArgs[T]
 
 	for _, fn := range withArgs {
 		fn(&args)
 	}
 
-	return Value[T]{
+	return &Value[T]{
 		ctx:      c,
 		data:     d,
 		grad:     args.grad,
@@ -165,57 +165,57 @@ func (v *Value[T]) backward() {
 	}
 }
 
-func (v *Value[T]) Add(o *Value[T], withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Add(o *Value[T], withArgs ...ValueArg[T]) *Value[T] {
 	c := v.ctx
 	args := []ValueArg[T]{c.WithPrev(v, o), c.WithOp(OpAdd)}
 	args = append(args, withArgs...)
 
-	return c.NewValue(v.data+o.data, args...)
+	return c.Val(v.data+o.data, args...)
 }
 
-func (v *Value[T]) Mul(o *Value[T], withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Mul(o *Value[T], withArgs ...ValueArg[T]) *Value[T] {
 	c := v.ctx
 	args := []ValueArg[T]{c.WithPrev(v, o), c.WithOp(OpMul)}
 	args = append(args, withArgs...)
 
-	return c.NewValue(v.data*o.data, args...)
+	return c.Val(v.data*o.data, args...)
 }
 
-func (v *Value[T]) Pow(n T, withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Pow(n T, withArgs ...ValueArg[T]) *Value[T] {
 	c := v.ctx
-	args := []ValueArg[T]{c.WithPrev(v), c.WithOp(OpPow)}
+	args := []ValueArg[T]{c.WithPrev(v), c.WithOp(OpPow), c.WithParam(n)}
 	args = append(args, withArgs...)
 
-	return c.NewValue(T(math.Pow(float64(v.data), float64(n))), args...)
+	return c.Val(T(math.Pow(float64(v.data), float64(n))), args...)
 }
 
-func (v *Value[T]) Div(o *Value[T], withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Div(o *Value[T], withArgs ...ValueArg[T]) *Value[T] {
 	frac := o.Pow(-1)
 
-	return v.Mul(&frac, withArgs...)
+	return v.Mul(frac, withArgs...)
 }
 
-func (v *Value[T]) Sub(o *Value[T], withArgs ...ValueArg[T]) Value[T] {
-	inv := v.ctx.NewValue(-1)
-  neg := o.Mul(&inv)
+func (v *Value[T]) Sub(o *Value[T], withArgs ...ValueArg[T]) *Value[T] {
+	inv := v.ctx.Val(-1)
+  neg := o.Mul(inv)
 
-	return v.Add(&neg, withArgs...)
+	return v.Add(neg, withArgs...)
 }
 
-func (v *Value[T]) Tanh(withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Tanh(withArgs ...ValueArg[T]) *Value[T] {
 	c := v.ctx
 	args := []ValueArg[T]{c.WithPrev(v), c.WithOp(OpTanh)}
 	args = append(args, withArgs...)
 
-	return c.NewValue(T(math.Tanh(float64(v.data))), args...)
+	return c.Val(T(math.Tanh(float64(v.data))), args...)
 }
 
-func (v *Value[T]) Exp(withArgs ...ValueArg[T]) Value[T] {
+func (v *Value[T]) Exp(withArgs ...ValueArg[T]) *Value[T] {
 	c := v.ctx
 	args := []ValueArg[T]{c.WithPrev(v), c.WithOp(OpExp)}
 	args = append(args, withArgs...)
 
-	return c.NewValue(T(math.Exp(float64(v.data))))
+	return c.Val(T(math.Exp(float64(v.data))), args...)
 }
 
 func (v Value[T]) Data() T {

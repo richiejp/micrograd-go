@@ -71,5 +71,5 @@ func Render[T constraints.Float](v *grad.Value[T]) error {
 	if err != nil {
 		return fmt.Errorf("Create ./out/graph.gv: %w", err)
 	}
-	return draw.DOT(g, file, draw.GraphAttribute("rankdir", "LR"))
+	return draw.DOT(g, file, /* draw.GraphAttribute("rankdir", "LR") */)
 }
