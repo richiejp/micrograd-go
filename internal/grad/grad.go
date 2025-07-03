@@ -96,6 +96,16 @@ func (c *Context[T]) Val(d T, withArgs ...ValueArg[T]) *Value[T] {
 	}
 }
 
+func (c *Context[T]) Vals(ds ...T) []*Value[T] {
+	vs := make([]*Value[T], len(ds))
+
+	for i, d := range ds {
+		vs[i] = c.Val(d)
+	}
+
+	return vs
+}
+
 func (c *Context[T]) topoSort(root *Value[T]) []*Value[T] {
 	visited := make(map[uint64]struct{})
 	var topoSorted []*Value[T]
