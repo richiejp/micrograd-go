@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/richiejp/micrograd/internal/grad"
 	"github.com/richiejp/micrograd/internal/viz"
 )
 
-func main() {
+func simpleGraph() {
 	gc := &grad.Context[float64]{}
 
 	x1 := gc.Val(2, gc.WithLabel("x1"))
@@ -23,8 +25,66 @@ func main() {
 	e := n.Mul(gc.Val(2), gc.WithLabel("2n")).Exp(gc.WithLabel("e^2n"))
 	o := e.Add(gc.Val(-1), gc.WithLabel("e-1")).Div(e.Add(gc.Val(1), gc.WithLabel("e+1")), gc.WithLabel("o"))
 	gc.Backward(o)
-	
-	if err := viz.Render(o); err != nil {
+
+	if err := viz.Render("./out/graph.gv", o); err != nil {
 		panic(err)
 	}
+
+}
+
+func trainNet() {
+	gc := grad.Context[float64]{}
+
+	fmt.Printf("Training...\n")
+
+	n := gc.MLP(3, 4, 4, 1)
+	xsf := [][]float64{
+		{2.0, 3.0, -1.0},
+		{3.0, -1, 0.5},
+		{0.5, 1.0, 1.0},
+		{1.0, 1.0, -1.0},
+	}
+
+	xs := make([][]*grad.Value[float64], len(xsf))
+	for i, row := range xsf {
+		xs[i] = make([]*grad.Value[float64], len(row))
+		for j, v := range row {
+			xs[i][j] = gc.Val(v, gc.WithLabel(fmt.Sprintf("xs%d,%d", i, j)))
+		}
+	}
+
+	ys := gc.Vals(1, -1, -1, 1)
+	ypred := make([]*grad.Value[float64], len(ys))
+
+	fmt.Printf("Predictions: ")
+	for i, x := range xs {
+		ypred[i] = n.Forward(x)[0]
+		if i < len(xs)-1 {
+			fmt.Printf("%v, ", ypred[i])
+		} else {
+			fmt.Printf("%v\n", ypred[i])
+		}
+	}
+
+	if err := viz.Render("./out/mlp.gv", ypred[0]); err != nil {
+		panic(err)
+	}
+
+	loss := gc.Val(0)
+	for i, ygt := range ys {
+		yout := ypred[i]
+		l := yout.Sub(ygt).Pow(2)
+		loss = loss.Add(l, gc.WithLabel(fmt.Sprintf("loss%d", i)))
+	}
+
+	fmt.Printf("Loss: %v\n", loss)
+
+	if err := viz.Render("./out/loss.gv", loss); err != nil {
+		panic(err)
+	}
+}
+
+func main() {
+	simpleGraph()
+	trainNet()
 }

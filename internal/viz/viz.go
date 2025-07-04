@@ -46,7 +46,7 @@ func trace[T constraints.Float](root *grad.Value[T]) (map[uint64]*grad.Value[T],
 	return nodes, edges
 }
 
-func Render[T constraints.Float](v *grad.Value[T]) error {
+func Render[T constraints.Float](path string, v *grad.Value[T]) error {
 	g := graph.New(uint64Hash, graph.Directed())
 
 	nodes, edges := trace(v)
@@ -67,9 +67,9 @@ func Render[T constraints.Float](v *grad.Value[T]) error {
 		g.AddEdge(e.From, e.To + opOffset)
 	}
 
-	file, err := os.Create("./out/graph.gv")
+	file, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("Create ./out/graph.gv: %w", err)
+		return fmt.Errorf("Create %s: %w", path, err)
 	}
 	return draw.DOT(g, file, /* draw.GraphAttribute("rankdir", "LR") */)
 }

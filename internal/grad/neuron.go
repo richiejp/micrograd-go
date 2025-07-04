@@ -1,6 +1,7 @@
 package grad
 
 import (
+	"fmt"
 	"iter"
 
 	"golang.org/x/exp/constraints"
@@ -14,11 +15,11 @@ type Neuron[T constraints.Float] struct {
 func (c *Context[T]) Neu(nin uint) *Neuron[T] {
 	n := Neuron[T]{
 		w: make([]*Value[T], nin),
-		b: c.Val(0.5),
+		b: c.Val(0.5, c.WithLabel("b")),
 	}
 
 	for i := range n.w {
-		n.w[i] = c.Val(0.5)
+		n.w[i] = c.Val(0.5, c.WithLabel(fmt.Sprintf("w%d", i)))
 	}
 
 	return &n
@@ -31,7 +32,7 @@ func (n *Neuron[T]) Forward(inputs []*Value[T]) *Value[T] {
 		act = act.Add(xi.Mul(n.w[i]))
 	}
 
-	return act.Tanh()
+	return act.Tanh(act.ctx.WithLabel("out"))
 }
 
 func (n *Neuron[T]) Parameters() iter.Seq[*Value[T]] {
@@ -114,9 +115,9 @@ func (mlp *MLP[T]) Forward(inputs []*Value[T]) []*Value[T] {
 	return out
 }
 
-func (l *MLP[T]) Parameters() iter.Seq[*Value[T]] {
+func (mlp *MLP[T]) Parameters() iter.Seq[*Value[T]] {
 	return func(yield func(*Value[T]) bool) {
-		for _, l := range l.layers {
+		for _, l := range mlp.layers {
 			for v := range l.Parameters() {
 				if !yield(v) {
 					return
@@ -125,4 +126,3 @@ func (l *MLP[T]) Parameters() iter.Seq[*Value[T]] {
 		}
 	}
 }
-

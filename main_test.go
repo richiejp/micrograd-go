@@ -167,7 +167,7 @@ var _ = Describe("Main", func() {
 		for i, x := range xs {
 			y := n.Forward(x)
 			Expect(len(y)).To(Equal(1))
-			ypred[i] = n.Forward(x)[0]
+			ypred[i] = y[0]
 		}
 
 		loss := gc.Val(0)
