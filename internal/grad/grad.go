@@ -128,12 +128,16 @@ func (c *Context[T]) topoSort(root *Value[T]) []*Value[T] {
 	return topoSorted 
 }
 
-func (c *Context[T]) Backward(v *Value[T]) {
-	v.grad = 1
-
-	if len(c.topoSorted) < 1 || c.topoSorted[0].id != v.id {
-		c.topoSorted = c.topoSort(v)
+func (c *Context[T]) Backward(root *Value[T]) {
+	if len(c.topoSorted) < 1 || c.topoSorted[0].id != root.id {
+		c.topoSorted = c.topoSort(root)
 	}
+
+	for _, v := range c.topoSorted {
+		v.grad = 0
+	}
+
+	root.grad = 1
 
 	for _, v := range c.topoSorted {
 		v.backward()
@@ -141,7 +145,7 @@ func (c *Context[T]) Backward(v *Value[T]) {
 }
 
 func (v Value[T]) String() string {
-	return fmt.Sprintf("Value(data=%v)", v.data)
+	return fmt.Sprintf("Value(data=%v, grad=%v)", v.data, v.grad)
 }
 
 func (v *Value[T]) backward() {
@@ -250,4 +254,10 @@ func (v Value[T]) Label() string {
 
 func (v Value[T]) ID() uint64 {
 	return v.id
+}
+
+ func (v *Value[T]) Descend(update T) T {
+	v.data += update * v.grad
+
+	return v.data
 }

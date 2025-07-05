@@ -56,30 +56,55 @@ func trainNet() {
 	ys := gc.Vals(1, -1, -1, 1)
 	ypred := make([]*grad.Value[float64], len(ys))
 
-	fmt.Printf("Predictions: ")
-	for i, x := range xs {
-		ypred[i] = n.Forward(x)[0]
-		if i < len(xs)-1 {
-			fmt.Printf("%v, ", ypred[i])
-		} else {
-			fmt.Printf("%v\n", ypred[i])
+	for t := range 100000 {
+		prnt := t%10000 == 0
+		if prnt {
+			fmt.Printf("Predictions: ")
+		}
+		for i, x := range xs {
+			ypred[i] = n.Forward(x)[0]
+			if prnt {
+				if i < len(xs)-1 {
+					fmt.Printf("%v, ", ypred[i])
+				} else {
+					fmt.Printf("%v\n", ypred[i])
+				}
+			}
+		}
+
+		loss := gc.Val(0)
+		for i, ygt := range ys {
+			yout := ypred[i]
+			l := yout.Sub(ygt).Pow(2)
+			loss = loss.Add(l, gc.WithLabel(fmt.Sprintf("loss%d", i)))
+		}
+
+		if prnt {
+			fmt.Printf("Loss: %v\n", loss)
+		}
+
+		if loss.Data() < 0.00001 {
+			fmt.Printf("Loss < 0.00001; stopping early")
+			break
+		}
+
+		gc.Backward(loss)
+
+		ps := n.Parameters()
+
+		if prnt {
+			fmt.Printf("Parameters:\n")
+		}
+		for x := range ps {
+			d := x.Descend(-0.05)
+			if prnt {
+				fmt.Printf("\t%v", x)
+				fmt.Printf(" -> %v\n", d)
+			}
 		}
 	}
 
 	if err := viz.Render("./out/mlp.gv", ypred[0]); err != nil {
-		panic(err)
-	}
-
-	loss := gc.Val(0)
-	for i, ygt := range ys {
-		yout := ypred[i]
-		l := yout.Sub(ygt).Pow(2)
-		loss = loss.Add(l, gc.WithLabel(fmt.Sprintf("loss%d", i)))
-	}
-
-	fmt.Printf("Loss: %v\n", loss)
-
-	if err := viz.Render("./out/loss.gv", loss); err != nil {
 		panic(err)
 	}
 }
