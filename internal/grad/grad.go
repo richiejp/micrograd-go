@@ -16,6 +16,7 @@ const (
 	OpAdd  Op = "+"
 	OpMul  Op = "*"
 	OpTanh Op = "tanh"
+	OpRelu Op = "relu"
 	OpExp  Op = "exp"
 	OpPow  Op = "pow"
 	OpDiv  Op = "/"
@@ -172,6 +173,12 @@ func (v *Value[T]) backward() {
 		a := v.prev[0]
 
 		a.grad += (1 - v.data*v.data) * v.grad
+	case OpRelu:
+		a := v.prev[0]
+
+		if v.data > 0 {
+			a.grad += v.grad
+		}
 	case OpExp:
 		a := v.prev[0]
 
@@ -222,6 +229,19 @@ func (v *Value[T]) Tanh(withArgs ...ValueArg[T]) *Value[T] {
 	args = append(args, withArgs...)
 
 	return c.Val(T(math.Tanh(float64(v.data))), args...)
+}
+
+func (v *Value[T]) Relu(withArgs ...ValueArg[T]) *Value[T] {
+	c := v.ctx
+	args := []ValueArg[T]{c.WithPrev(v), c.WithOp(OpRelu)}
+	args = append(args, withArgs...)
+	var x T
+
+	if v.data > 0 {
+		x = v.data
+	}
+
+	return c.Val(x, args...)
 }
 
 func (v *Value[T]) Exp(withArgs ...ValueArg[T]) *Value[T] {
