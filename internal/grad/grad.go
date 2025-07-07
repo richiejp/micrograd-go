@@ -145,6 +145,15 @@ func (c *Context[T]) Backward(root *Value[T]) {
 	}
 }
 
+func (c *Context[T]) Sum(vs []*Value[T]) *Value[T] {
+	sum := vs[0]
+	for _, l := range vs[1:] {
+		sum = sum.Add(l)
+	}
+
+	return sum
+}
+
 func (v Value[T]) String() string {
 	return fmt.Sprintf("Value(data=%v, grad=%v)", v.data, v.grad)
 }
